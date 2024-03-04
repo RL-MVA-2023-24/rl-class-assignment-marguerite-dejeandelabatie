@@ -12,7 +12,7 @@ from env_hiv import HIVPatient
 env = TimeLimit(
     env=HIVPatient(domain_randomization=False), max_episode_steps=200
 )  # The time wrapper limits the number of steps in an episode at 200.
-GAMMA = 1
+GAMMA = 0.95
 NB_ACTIONS = env.action_space.n
 
 
@@ -47,7 +47,7 @@ class ProjectAgent:
                     Q2[:,a2] = Q.predict(S2A2)
                 max_Q2 = np.max(Q2,axis=1)
                 value = self.R + self.gamma*max_Q2
-            Q = RandomForestRegressor(50, max_depth=50,n_jobs=-1)
+            Q = RandomForestRegressor(50, max_depth=15,n_jobs=-1)
             Q.fit(SA,value)
         self.Qvalue = Q
 
@@ -87,16 +87,11 @@ class ProjectAgent:
             print(score2, end=" ")
             if score2 > score:
                 score = score2
-                mask = np.arange(3*nb_samples)>=nb_samples
             else:
                 self.Qvalue = self.old_Qvalue
-                mask = (np.arange(3*nb_samples)<nb_samples)|(np.arange(3*nb_samples)>=2*nb_samples)
             print(score)
             self.old_Qvalue = self.Qvalue
-            if self.S.shape[0]<3*nb_samples:
-                mask = np.full(self.S.shape[0],True)
-            self.S, self.S2 = self.S[mask], self.S2[mask]
-            self.A, self.R = self.A[mask], self.R[mask]
+            agent.save(f"model_{i}.pkl")
 
     def act(self, observation, use_random=False):
         if use_random:
@@ -114,8 +109,8 @@ class ProjectAgent:
             self.Qvalue = pickle.load(f)
 
 if __name__ == "__main__":
-    nb_samples, nb_iter = 7000, 200
-    nb_train = 10
+    nb_samples, nb_iter = 4000, 200
+    nb_train = 20
     agent = ProjectAgent()
     agent.train(env,nb_train, nb_samples, nb_iter)
     agent.save("model.pkl")
